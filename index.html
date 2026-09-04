@@ -15,17 +15,16 @@
       .print-area { width: 100% !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
       .table-scroll-container { overflow: visible !important; }
       table { border-collapse: collapse !important; width: 100% !important; min-width: 100% !important; }
-      th, td { border: 1px solid #000 !important; font-size: 9.5pt !important; height: 28px !important; padding: 0 4px !important; }
+      th, td { border: 1px solid #000 !important; font-size: 9pt !important; padding: 3px 4px !important; }
       th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @page { size: A4 portrait; margin: 14mm 10mm 14mm 10mm; }
+      @page { size: A4 portrait; margin: 12mm 8mm 12mm 8mm; }
     }
     .custom-table th, .custom-table td { border: 1px solid #333; }
     .table-row-hover:hover { background-color: #f1f5f9; cursor: pointer; }
     
-    /* 화면에서는 최소 720px 너비를 유지해 찌그러짐 방지 */
     @media screen {
       .work-table {
-        min-width: 720px;
+        min-width: 760px;
       }
     }
   </style>
@@ -46,12 +45,12 @@
         <div class="flex items-center gap-1.5 flex-1 sm:flex-initial border-l pl-2">
           <label class="font-bold text-xs sm:text-sm whitespace-nowrap">일자:</label>
           <input type="date" id="selectedDate" class="w-full sm:w-auto border rounded-lg px-2 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="onDateChange()" />
-          <button type="button" onclick="showAllDays()" class="text-xs px-2 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 font-semibold text-gray-600 whitespace-nowrap transition">
+          <button type="button" onclick="showAllDays()" class="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 font-semibold text-gray-600 whitespace-nowrap transition">
             전체
           </button>
         </div>
 
-        <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap">
+        <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간
         </span>
       </div>
@@ -82,31 +81,31 @@
     <button 
       type="button" 
       onclick="resetSearch()" 
-      class="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 whitespace-nowrap transition"
+      class="text-xs text-gray-500 hover:text-gray-800 px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-100 whitespace-nowrap transition"
     >
       초기화
     </button>
   </div>
 
-  <!-- 작업일지 표 본체 (스크롤 컨테이너 적용) -->
+  <!-- 작업일지 표 본체 -->
   <div class="print-area max-w-5xl mx-auto bg-white p-4 sm:p-8 rounded-xl shadow-md">
     <div class="relative text-center mb-4 sm:mb-5">
       <div class="sm:absolute left-0 bottom-1 font-bold text-sm sm:text-lg mb-1 sm:mb-0" id="printPeriodText"></div>
       <h1 class="text-2xl sm:text-3xl font-extrabold tracking-[10px] sm:tracking-[16px] inline-block pl-[10px] sm:pl-[16px]">작 업 일 지</h1>
     </div>
 
-    <!-- 모바일 가로 스크롤 영역 -->
+    <!-- 테이블 가로 스크롤 래퍼 -->
     <div class="table-scroll-container overflow-x-auto">
       <table class="work-table w-full custom-table text-center border-collapse">
         <thead>
           <tr class="bg-gray-100 text-xs sm:text-sm font-bold h-9">
             <th style="width: 5%;">월</th>
             <th style="width: 5%;">일</th>
-            <th style="width: 14%;">차 종</th>
-            <th style="width: 17%;">차량번호</th>
-            <th style="width: 14%;">상 호</th>
-            <th style="width: 12%;">성 명</th>
-            <th style="width: 20%;">작업내용</th>
+            <th style="width: 13%;">차 종</th>
+            <th style="width: 16%;">차량번호</th>
+            <th style="width: 13%;">상 호</th>
+            <th style="width: 11%;">성 명</th>
+            <th style="width: 24%;">작업내용</th>
             <th style="width: 13%;">금 액</th>
           </tr>
         </thead>
@@ -128,7 +127,7 @@
     </div>
   </div>
 
-  <!-- 모바일 최적화 작업 등록/수정 모달 -->
+  <!-- 작업 등록/수정 모달 -->
   <div id="recordModal" class="fixed inset-0 bg-black/50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
     <div class="bg-white rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-3">
@@ -139,7 +138,6 @@
       <form id="recordForm" onsubmit="handleRecordSubmit(event)" class="space-y-3">
         <input type="hidden" id="editDocId" value="" />
         
-        <!-- 모바일 1열, PC 2열 반응형 그리드 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">작업 일자</label>
@@ -175,7 +173,7 @@
 
         <div>
           <label class="text-xs font-semibold text-gray-700 mb-1 block">작업내용</label>
-          <textarea id="description" rows="2" placeholder="정비 내역 및 상세 작업 내용" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
+          <textarea id="description" rows="3" placeholder="정비 내역 및 상세 작업 내용" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
 
         <div class="flex justify-between items-center pt-3 border-t gap-2">
@@ -257,13 +255,13 @@
           });
 
           document.getElementById('liveStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간';
-          document.getElementById('liveStatus').className = 'flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800';
+          document.getElementById('liveStatus').className = 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
 
           renderTable();
         }, (error) => {
           console.error("수신 에러:", error);
           document.getElementById('liveStatus').innerHTML = '⚠️ 연결 확인';
-          document.getElementById('liveStatus').className = 'text-xs font-semibold px-2 py-1 rounded-full bg-red-100 text-red-800';
+          document.getElementById('liveStatus').className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800';
         });
     }
 
@@ -303,15 +301,15 @@
         const [_, m, d] = (item.date || '--').split('-');
 
         tbody.innerHTML += `
-          <tr class="h-7 table-row-hover" onclick="openEditModal('${item.id}')">
-            <td>${parseInt(m) || ''}</td>
-            <td>${parseInt(d) || ''}</td>
-            <td class="font-medium truncate max-w-[100px]">${item.carModel || ''}</td>
-            <td class="font-bold">${item.carNumber || ''}</td>
-            <td class="truncate max-w-[100px]">${item.companyName || ''}</td>
-            <td>${item.customerName || ''}</td>
-            <td class="text-left px-2 truncate max-w-[140px]">${item.description || ''}</td>
-            <td class="text-right pr-2 font-mono font-semibold">${amt ? amt.toLocaleString() : ''}</td>
+          <tr class="min-h-[28px] table-row-hover" onclick="openEditModal('${item.id}')">
+            <td class="py-1">${parseInt(m) || ''}</td>
+            <td class="py-1">${parseInt(d) || ''}</td>
+            <td class="py-1 font-medium break-words">${item.carModel || ''}</td>
+            <td class="py-1 font-bold whitespace-nowrap">${item.carNumber || ''}</td>
+            <td class="py-1 break-words">${item.companyName || ''}</td>
+            <td class="py-1 break-words">${item.customerName || ''}</td>
+            <td class="py-1 text-left px-2 whitespace-pre-wrap break-words">${item.description || ''}</td>
+            <td class="py-1 text-right pr-2 font-mono font-semibold whitespace-nowrap">${amt ? amt.toLocaleString() : ''}</td>
           </tr>
         `;
       });
