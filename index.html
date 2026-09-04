@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 모바일에서 두 손가락으로 자유롭게 확대(Zoom) 가능하도록 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
   <title>월별 작업일지 (실시간 공유)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase SDK -->
@@ -12,7 +13,7 @@
     @media print {
       body { background: white !important; padding: 0 !important; }
       .no-print { display: none !important; }
-      .print-area { width: 100% !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+      .print-area { width: 100% !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: unset !important; }
       @page { size: A4 portrait; margin: 14mm 10mm 14mm 10mm; }
       table { border-collapse: collapse !important; width: 100% !important; }
       th, td { border: 1px solid #000 !important; font-size: 9.5pt !important; height: 28px !important; padding: 0 4px !important; }
@@ -20,128 +21,136 @@
     }
     .custom-table th, .custom-table td { border: 1px solid #333; }
     .table-row-hover:hover { background-color: #f1f5f9; cursor: pointer; }
+    
+    /* 모바일 가로 스크롤 부드럽게 */
+    .table-scroll-container {
+      -webkit-overflow-scrolling: touch;
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-900 p-4 sm:p-6">
+<body class="bg-gray-100 min-h-screen text-gray-900 p-2 sm:p-6">
 
   <!-- 컨트롤 바 (인쇄 시 자동 숨김) -->
-  <div class="no-print max-w-5xl mx-auto mb-3 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <label class="font-bold text-sm">작업 년월:</label>
-      <input type="month" id="selectedMonth" class="border rounded-lg px-3 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="setupRealtimeListener()" />
-      <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간 동기화 중
+  <div class="no-print max-w-5xl mx-auto mb-3 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2 sm:gap-3">
+      <label class="font-bold text-xs sm:text-sm whitespace-nowrap">작업 년월:</label>
+      <input type="month" id="selectedMonth" class="border rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="setupRealtimeListener()" />
+      <span id="liveStatus" class="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 동기화 중
       </span>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
-        + 새 작업 등록
+      <button onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-lg shadow-sm flex items-center gap-1 transition">
+        + 등록
       </button>
-      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
-        🖨️ A4 인쇄
+      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-lg shadow-sm flex items-center gap-1 transition">
+        🖨️ 인쇄
       </button>
     </div>
   </div>
 
-  <!-- 검색 바 (등록줄 밑에 한 줄로 배치, 인쇄 시 숨김) -->
-  <div class="no-print max-w-5xl mx-auto mb-6 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-200 flex items-center gap-3">
+  <!-- 검색 바 (인쇄 시 자동 숨김) -->
+  <div class="no-print max-w-5xl mx-auto mb-4 sm:mb-6 bg-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
     <span class="text-gray-400 text-sm">🔍</span>
     <input 
       type="text" 
       id="searchInput" 
       placeholder="차량번호, 차종, 상호, 고객명, 작업내용 검색..." 
-      class="w-full text-sm outline-none bg-transparent"
+      class="w-full text-xs sm:text-sm outline-none bg-transparent"
       oninput="renderTable()" 
     />
     <button 
       type="button" 
       onclick="resetSearch()" 
-      class="text-xs text-gray-500 hover:text-gray-800 px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-100 whitespace-nowrap transition"
+      class="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 whitespace-nowrap transition"
     >
       초기화
     </button>
   </div>
 
-  <!-- 인쇄 및 작업일지 양식 -->
-  <div class="print-area max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-md">
-    <div class="relative text-center mb-5">
-      <div class="absolute left-0 bottom-1 font-bold text-lg" id="printPeriodText"></div>
-      <h1 class="text-3xl font-extrabold tracking-[16px] inline-block pl-[16px]">작 업 일 지</h1>
-    </div>
+  <!-- 모바일 가로 스크롤 감싸는 컨테이너 -->
+  <div class="max-w-5xl mx-auto table-scroll-container overflow-x-auto pb-4">
+    <!-- 인쇄 및 작업일지 양식 (최소 너비 800px로 형태가 찌그러지지 않고 고정됨) -->
+    <div class="print-area min-w-[800px] bg-white p-6 sm:p-8 rounded-xl shadow-md">
+      <div class="relative text-center mb-5">
+        <div class="absolute left-0 bottom-1 font-bold text-base sm:text-lg" id="printPeriodText"></div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-[16px] inline-block pl-[16px]">작 업 일 지</h1>
+      </div>
 
-    <table class="w-full custom-table text-center border-collapse">
-      <thead>
-        <tr class="bg-gray-100 text-sm font-bold h-9">
-          <th style="width: 5%;">월</th>
-          <th style="width: 5%;">일</th>
-          <th style="width: 14%;">차 종</th>
-          <th style="width: 17%;">차량번호</th>
-          <th style="width: 14%;">상 호</th>
-          <th style="width: 12%;">성 명</th>
-          <th style="width: 20%;">작업내용</th>
-          <th style="width: 13%;">금 액</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <!-- 데이터 렌더링 -->
-      </tbody>
-      <tfoot>
-        <tr class="font-bold text-sm bg-gray-50 h-9">
-          <td colspan="7" class="py-2 tracking-widest text-center">합 계</td>
-          <td id="totalAmount" class="text-right pr-3 font-extrabold text-blue-900">0원</td>
-        </tr>
-      </tfoot>
-    </table>
-    <p class="no-print text-xs text-gray-400 mt-2 text-right">* 등록된 행을 클릭하면 내용을 수정하거나 삭제할 수 있습니다.</p>
+      <table class="w-full custom-table text-center border-collapse">
+        <thead>
+          <tr class="bg-gray-100 text-xs sm:text-sm font-bold h-9">
+            <th style="width: 5%;">월</th>
+            <th style="width: 5%;">일</th>
+            <th style="width: 14%;">차 종</th>
+            <th style="width: 17%;">차량번호</th>
+            <th style="width: 14%;">상 호</th>
+            <th style="width: 12%;">성 명</th>
+            <th style="width: 20%;">작업내용</th>
+            <th style="width: 13%;">금 액</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- 데이터 렌더링 -->
+        </tbody>
+        <tfoot>
+          <tr class="font-bold text-xs sm:text-sm bg-gray-50 h-9">
+            <td colspan="7" class="py-2 tracking-widest text-center">합 계</td>
+            <td id="totalAmount" class="text-right pr-3 font-extrabold text-blue-900">0원</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p class="no-print text-xs text-gray-400 mt-2 text-right">* 등록된 행을 클릭하면 내용을 수정하거나 삭제할 수 있습니다.</p>
+    </div>
   </div>
 
-  <!-- 작업 등록/수정 팝업 모달 -->
-  <div id="recordModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+  <!-- 작업 등록/수정 팝업 모달 (모바일 화면 잘림 방지 스크롤 포함) -->
+  <div id="recordModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-3 sm:p-4 z-50">
+    <div class="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg text-gray-900" id="modalTitle">새 작업 등록</h3>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        <h3 class="font-bold text-base sm:text-lg text-gray-900" id="modalTitle">새 작업 등록</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none">&times;</button>
       </div>
 
       <form id="recordForm" onsubmit="handleRecordSubmit(event)" class="space-y-3">
         <input type="hidden" id="editDocId" value="" />
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">작업 일자</label>
-            <input type="date" id="workDate" required class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
+            <input type="date" id="workDate" required class="w-full border rounded-lg p-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">차종</label>
-            <input type="text" id="carModel" placeholder="예: 소나타" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
+            <input type="text" id="carModel" placeholder="예: 소나타" class="w-full border rounded-lg p-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">차량번호</label>
-            <input type="text" id="carNumber" placeholder="예: 12가 3456" required class="w-full border rounded-lg p-2 text-sm font-bold focus:ring-2 focus:ring-blue-500" />
+            <input type="text" id="carNumber" placeholder="예: 12가 3456" required class="w-full border rounded-lg p-2 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">상호</label>
-            <input type="text" id="companyName" placeholder="거래처 상호" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
+            <input type="text" id="companyName" placeholder="거래처 상호" class="w-full border rounded-lg p-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">성명</label>
-            <input type="text" id="customerName" placeholder="고객명" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
+            <input type="text" id="customerName" placeholder="고객명" class="w-full border rounded-lg p-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">금액 (원)</label>
-            <input type="number" id="amount" placeholder="0" class="w-full border rounded-lg p-2 text-sm font-bold text-right focus:ring-2 focus:ring-blue-500" />
+            <input type="number" id="amount" placeholder="0" class="w-full border rounded-lg p-2 text-xs sm:text-sm font-bold text-right focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
 
         <div>
           <label class="text-xs font-semibold text-gray-700 mb-1 block">작업내용</label>
-          <textarea id="description" rows="2" placeholder="정비 내역 및 작업 상세 내용" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
+          <textarea id="description" rows="2" placeholder="정비 내역 및 작업 상세 내용" class="w-full border rounded-lg p-2 text-xs sm:text-sm focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
 
         <div class="flex justify-between items-center pt-3 border-t">
@@ -149,8 +158,8 @@
             이 내역 삭제
           </button>
           <div class="flex gap-2 ml-auto">
-            <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
-            <button type="submit" id="btnSubmit" class="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">저장</button>
+            <button type="button" onclick="closeModal()" class="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
+            <button type="submit" id="btnSubmit" class="px-4 sm:px-5 py-2 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">저장</button>
           </div>
         </div>
       </form>
@@ -202,13 +211,13 @@
             return timeB - timeA;
           });
 
-          document.getElementById('liveStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간 동기화 중';
-          document.getElementById('liveStatus').className = 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
+          document.getElementById('liveStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 동기화 중';
+          document.getElementById('liveStatus').className = 'flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap';
 
           renderTable();
         }, (error) => {
           console.error("실시간 수신 에러:", error);
-          document.getElementById('liveStatus').innerHTML = '⚠️ 권한 규칙 또는 연결 확인 필요';
+          document.getElementById('liveStatus').innerHTML = '⚠️ 연결 확인 필요';
           document.getElementById('liveStatus').className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800';
         });
     }
@@ -220,7 +229,6 @@
 
       const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
 
-      // 검색어 필터링
       const filteredRecords = currentRecords.filter(item => {
         if (!keyword) return true;
         const carNum = (item.carNumber || '').toLowerCase();
@@ -250,7 +258,6 @@
         `;
       });
 
-      // A4 용지 규격을 위한 빈 행 채우기
       const emptyCount = Math.max(0, TOTAL_ROWS - filteredRecords.length);
       for (let i = 0; i < emptyCount; i++) {
         tbody.innerHTML += `
