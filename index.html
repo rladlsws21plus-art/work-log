@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>월별 작업일지 (실시간 공유)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase SDK -->
@@ -13,69 +13,44 @@
       body { background: white !important; padding: 0 !important; }
       .no-print { display: none !important; }
       .print-area { width: 100% !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-      .table-scroll-container { overflow: visible !important; }
-      table { border-collapse: collapse !important; width: 100% !important; min-width: 100% !important; }
-      th, td { border: 1px solid #000 !important; font-size: 9pt !important; padding: 3px 4px !important; }
+      @page { size: A4 portrait; margin: 14mm 10mm 14mm 10mm; }
+      table { border-collapse: collapse !important; width: 100% !important; }
+      th, td { border: 1px solid #000 !important; font-size: 9.5pt !important; height: 28px !important; padding: 0 4px !important; }
       th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @page { size: A4 portrait; margin: 12mm 8mm 12mm 8mm; }
     }
     .custom-table th, .custom-table td { border: 1px solid #333; }
     .table-row-hover:hover { background-color: #f1f5f9; cursor: pointer; }
-    
-    @media screen {
-      .work-table {
-        min-width: 760px;
-      }
-    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-900 p-2 sm:p-6">
+<body class="bg-gray-100 min-h-screen text-gray-900 p-4 sm:p-6">
 
-  <!-- 컨트롤 바 (인쇄 시 숨김) -->
-  <div class="no-print max-w-5xl mx-auto mb-3 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200">
-    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-      
-      <!-- 날짜 필터 영역 -->
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="flex items-center gap-1.5 flex-1 sm:flex-initial">
-          <label class="font-bold text-xs sm:text-sm whitespace-nowrap">년월:</label>
-          <input type="month" id="selectedMonth" class="w-full sm:w-auto border rounded-lg px-2 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="onMonthChange()" />
-        </div>
-
-        <div class="flex items-center gap-1.5 flex-1 sm:flex-initial border-l pl-2">
-          <label class="font-bold text-xs sm:text-sm whitespace-nowrap">일자:</label>
-          <input type="date" id="selectedDate" class="w-full sm:w-auto border rounded-lg px-2 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="onDateChange()" />
-          <button type="button" onclick="showAllDays()" class="text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 font-semibold text-gray-600 whitespace-nowrap transition">
-            전체
-          </button>
-        </div>
-
-        <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 whitespace-nowrap">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간
-        </span>
-      </div>
-
-      <!-- 버튼 영역 -->
-      <div class="flex items-center gap-2">
-        <button onclick="openAddModal()" class="flex-1 sm:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
-          + 새 작업 등록
-        </button>
-        <button onclick="window.print()" class="flex-1 sm:flex-none justify-center bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
-          🖨️ A4 인쇄
-        </button>
-      </div>
-
+  <!-- 컨트롤 바 (인쇄 시 자동 숨김) -->
+  <div class="no-print max-w-5xl mx-auto mb-3 bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <label class="font-bold text-sm">작업 년월:</label>
+      <input type="month" id="selectedMonth" class="border rounded-lg px-3 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="setupRealtimeListener()" />
+      <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간 동기화 중
+      </span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+        + 새 작업 등록
+      </button>
+      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+        🖨️ A4 인쇄
+      </button>
     </div>
   </div>
 
-  <!-- 검색 바 -->
-  <div class="no-print max-w-5xl mx-auto mb-4 sm:mb-6 bg-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
-    <span class="text-gray-400 text-xs sm:text-sm">🔍</span>
+  <!-- 검색 바 (인쇄 시 숨김) -->
+  <div class="no-print max-w-5xl mx-auto mb-6 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-200 flex items-center gap-3">
+    <span class="text-gray-400 text-sm">🔍</span>
     <input 
       type="text" 
       id="searchInput" 
-      placeholder="차량번호, 차종, 고객명, 작업내용 검색..." 
-      class="w-full text-xs sm:text-sm outline-none bg-transparent"
+      placeholder="차량번호, 차종, 상호, 고객명, 작업내용 검색..." 
+      class="w-full text-sm outline-none bg-transparent"
       oninput="renderTable()" 
     />
     <button 
@@ -87,58 +62,51 @@
     </button>
   </div>
 
-  <!-- 작업일지 표 본체 -->
-  <div class="print-area max-w-5xl mx-auto bg-white p-4 sm:p-8 rounded-xl shadow-md">
-    <div class="relative text-center mb-4 sm:mb-5">
-      <div class="sm:absolute left-0 bottom-1 font-bold text-sm sm:text-lg mb-1 sm:mb-0" id="printPeriodText"></div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-[10px] sm:tracking-[16px] inline-block pl-[10px] sm:pl-[16px]">작 업 일 지</h1>
+  <!-- 인쇄 및 작업일지 양식 -->
+  <div class="print-area max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-md">
+    <div class="relative text-center mb-5">
+      <div class="absolute left-0 bottom-1 font-bold text-lg" id="printPeriodText"></div>
+      <h1 class="text-3xl font-extrabold tracking-[16px] inline-block pl-[16px]">작 업 일 지</h1>
     </div>
 
-    <!-- 테이블 가로 스크롤 래퍼 -->
-    <div class="table-scroll-container overflow-x-auto">
-      <table class="work-table w-full custom-table text-center border-collapse">
-        <thead>
-          <tr class="bg-gray-100 text-xs sm:text-sm font-bold h-9">
-            <th style="width: 5%;">월</th>
-            <th style="width: 5%;">일</th>
-            <th style="width: 13%;">차 종</th>
-            <th style="width: 16%;">차량번호</th>
-            <th style="width: 13%;">상 호</th>
-            <th style="width: 11%;">성 명</th>
-            <th style="width: 24%;">작업내용</th>
-            <th style="width: 13%;">금 액</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <!-- 데이터 렌더링 -->
-        </tbody>
-        <tfoot>
-          <tr class="font-bold text-xs sm:text-sm bg-gray-50 h-9">
-            <td colspan="7" class="py-2 tracking-widest text-center">합 계</td>
-            <td id="totalAmount" class="text-right pr-3 font-extrabold text-blue-900">0원</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-
-    <div class="no-print flex justify-between items-center mt-2 text-xs text-gray-400">
-      <span class="sm:hidden">👉 좌우로 밀어서 전체 열 확인 가능</span>
-      <span class="ml-auto">* 행을 누르면 수정/삭제할 수 있습니다.</span>
-    </div>
+    <table class="w-full custom-table text-center border-collapse">
+      <thead>
+        <tr class="bg-gray-100 text-sm font-bold h-9">
+          <th style="width: 5%;">월</th>
+          <th style="width: 5%;">일</th>
+          <th style="width: 14%;">차 종</th>
+          <th style="width: 17%;">차량번호</th>
+          <th style="width: 14%;">상 호</th>
+          <th style="width: 12%;">성 명</th>
+          <th style="width: 20%;">작업내용</th>
+          <th style="width: 13%;">금 액</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <!-- 데이터 렌더링 -->
+      </tbody>
+      <tfoot>
+        <tr class="font-bold text-sm bg-gray-50 h-9">
+          <td colspan="7" class="py-2 tracking-widest text-center">합 계</td>
+          <td id="totalAmount" class="text-right pr-3 font-extrabold text-blue-900">0원</td>
+        </tr>
+      </tfoot>
+    </table>
+    <p class="no-print text-xs text-gray-400 mt-2 text-right">* 등록된 행을 클릭하면 내용을 수정하거나 삭제할 수 있습니다.</p>
   </div>
 
-  <!-- 작업 등록/수정 모달 -->
-  <div id="recordModal" class="fixed inset-0 bg-black/50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-    <div class="bg-white rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-bold text-base sm:text-lg text-gray-900" id="modalTitle">새 작업 등록</h3>
-        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold p-1 leading-none">&times;</button>
+  <!-- 작업 등록/수정 팝업 모달 -->
+  <div id="recordModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-gray-900" id="modalTitle">새 작업 등록</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
       </div>
 
       <form id="recordForm" onsubmit="handleRecordSubmit(event)" class="space-y-3">
         <input type="hidden" id="editDocId" value="" />
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">작업 일자</label>
             <input type="date" id="workDate" required class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
@@ -149,7 +117,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">차량번호</label>
             <input type="text" id="carNumber" placeholder="예: 12가 3456" required class="w-full border rounded-lg p-2 text-sm font-bold focus:ring-2 focus:ring-blue-500" />
@@ -160,7 +128,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs font-semibold text-gray-700 mb-1 block">성명</label>
             <input type="text" id="customerName" placeholder="고객명" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500" />
@@ -173,16 +141,16 @@
 
         <div>
           <label class="text-xs font-semibold text-gray-700 mb-1 block">작업내용</label>
-          <textarea id="description" rows="3" placeholder="정비 내역 및 상세 작업 내용" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
+          <textarea id="description" rows="2" placeholder="정비 내역 및 작업 상세 내용" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
 
-        <div class="flex justify-between items-center pt-3 border-t gap-2">
-          <button type="button" id="btnDelete" onclick="deleteCurrentRecord()" class="hidden text-xs text-red-600 hover:underline font-bold py-2">
-            삭제
+        <div class="flex justify-between items-center pt-3 border-t">
+          <button type="button" id="btnDelete" onclick="deleteCurrentRecord()" class="hidden text-xs text-red-600 hover:underline font-bold">
+            이 내역 삭제
           </button>
           <div class="flex gap-2 ml-auto">
-            <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs sm:text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
-            <button type="submit" id="btnSubmit" class="px-5 py-2 text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">저장</button>
+            <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
+            <button type="submit" id="btnSubmit" class="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">저장</button>
           </div>
         </div>
       </form>
@@ -212,31 +180,23 @@
     const currYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     document.getElementById('selectedMonth').value = currYM;
 
-    function onMonthChange() {
-      document.getElementById('selectedDate').value = '';
-      setupRealtimeListener();
-    }
-
-    function onDateChange() {
-      const dateVal = document.getElementById('selectedDate').value;
-      if (dateVal) {
-        const ym = dateVal.substring(0, 7);
-        if (document.getElementById('selectedMonth').value !== ym) {
-          document.getElementById('selectedMonth').value = ym;
-          setupRealtimeListener();
-          return;
-        }
+    // 타임스탬프 파싱 헬퍼 (파이썬 ISO 문자열, Firestore Timestamp 객체 모두 밀리초로 변환)
+    function parseTimestamp(val) {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (val.seconds) return val.seconds * 1000;
+      if (typeof val === 'string') {
+        const parsed = new Date(val).getTime();
+        return isNaN(parsed) ? 0 : parsed;
       }
-      renderTable();
-    }
-
-    function showAllDays() {
-      document.getElementById('selectedDate').value = '';
-      renderTable();
+      return 0;
     }
 
     function setupRealtimeListener() {
       const ym = document.getElementById('selectedMonth').value;
+      const [year, month] = ym.split('-');
+      document.getElementById('printPeriodText').textContent = `${year}년 ${parseInt(month, 10)}월`;
+
       if (unsubscribe) unsubscribe();
 
       unsubscribe = db.collection('work_logs')
@@ -247,20 +207,29 @@
             currentRecords.push({ id: doc.id, ...doc.data() });
           });
 
-          // 최신 등록순 (맨 윗줄 반영)
+          // [핵심 정렬 로직]
+          // 1순위: 작업 일자(date) 내림차순 (최신 날짜 우선)
+          // 2순위: 동일 날짜 내 최초 등록 시각(createdAt) 내림차순 (최근 등록 우선)
           currentRecords.sort((a, b) => {
-            const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-            const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
-            return timeB - timeA;
+            const dateA = a.date || '';
+            const dateB = b.date || '';
+
+            if (dateA !== dateB) {
+              return dateB.localeCompare(dateA); // 날짜 역순
+            }
+
+            const timeA = parseTimestamp(a.createdAt);
+            const timeB = parseTimestamp(b.createdAt);
+            return timeB - timeA; // 동일 날짜 내 최근 등록순
           });
 
-          document.getElementById('liveStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간';
+          document.getElementById('liveStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간 동기화 중';
           document.getElementById('liveStatus').className = 'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
 
           renderTable();
         }, (error) => {
-          console.error("수신 에러:", error);
-          document.getElementById('liveStatus').innerHTML = '⚠️ 연결 확인';
+          console.error("실시간 수신 에러:", error);
+          document.getElementById('liveStatus').innerHTML = '⚠️ 동기화 실패 (규칙 또는 네트워크 확인)';
           document.getElementById('liveStatus').className = 'text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800';
         });
     }
@@ -270,22 +239,10 @@
       tbody.innerHTML = '';
       let sum = 0;
 
-      const ym = document.getElementById('selectedMonth').value;
-      const [year, month] = ym.split('-');
-      const targetDate = document.getElementById('selectedDate').value;
-
-      if (targetDate) {
-        const [_, __, day] = targetDate.split('-');
-        document.getElementById('printPeriodText').textContent = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
-      } else {
-        document.getElementById('printPeriodText').textContent = `${year}년 ${parseInt(month)}월`;
-      }
-
       const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
 
+      // 검색어 필터링
       const filteredRecords = currentRecords.filter(item => {
-        if (targetDate && item.date !== targetDate) return false;
-
         if (!keyword) return true;
         const carNum = (item.carNumber || '').toLowerCase();
         const carMdl = (item.carModel || '').toLowerCase();
@@ -301,19 +258,20 @@
         const [_, m, d] = (item.date || '--').split('-');
 
         tbody.innerHTML += `
-          <tr class="min-h-[28px] table-row-hover" onclick="openEditModal('${item.id}')">
-            <td class="py-1">${parseInt(m) || ''}</td>
-            <td class="py-1">${parseInt(d) || ''}</td>
-            <td class="py-1 font-medium break-words">${item.carModel || ''}</td>
-            <td class="py-1 font-bold whitespace-nowrap">${item.carNumber || ''}</td>
-            <td class="py-1 break-words">${item.companyName || ''}</td>
-            <td class="py-1 break-words">${item.customerName || ''}</td>
-            <td class="py-1 text-left px-2 whitespace-pre-wrap break-words">${item.description || ''}</td>
-            <td class="py-1 text-right pr-2 font-mono font-semibold whitespace-nowrap">${amt ? amt.toLocaleString() : ''}</td>
+          <tr class="h-7 table-row-hover" onclick="openEditModal('${item.id}')">
+            <td>${parseInt(m, 10) || ''}</td>
+            <td>${parseInt(d, 10) || ''}</td>
+            <td class="font-medium">${item.carModel || ''}</td>
+            <td class="font-bold">${item.carNumber || ''}</td>
+            <td>${item.companyName || ''}</td>
+            <td>${item.customerName || ''}</td>
+            <td class="text-left px-2">${item.description || ''}</td>
+            <td class="text-right pr-2 font-mono">${amt ? amt.toLocaleString() : ''}</td>
           </tr>
         `;
       });
 
+      // A4 용지 규격 유지를 위한 빈 행 채우기 (24줄)
       const emptyCount = Math.max(0, TOTAL_ROWS - filteredRecords.length);
       for (let i = 0; i < emptyCount; i++) {
         tbody.innerHTML += `
@@ -367,10 +325,7 @@
 
         if (document.getElementById('selectedMonth').value !== ym) {
           document.getElementById('selectedMonth').value = ym;
-          document.getElementById('selectedDate').value = dateVal;
           setupRealtimeListener();
-        } else {
-          renderTable();
         }
 
         closeModal();
@@ -402,15 +357,9 @@
       document.getElementById('btnDelete').classList.add('hidden');
       document.getElementById('recordForm').reset();
 
-      const selectedD = document.getElementById('selectedDate').value;
       const ym = document.getElementById('selectedMonth').value;
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      if (selectedD) {
-        document.getElementById('workDate').value = selectedD;
-      } else {
-        document.getElementById('workDate').value = todayStr.startsWith(ym) ? todayStr : `${ym}-01`;
-      }
+      document.getElementById('workDate').value = todayStr.startsWith(ym) ? todayStr : `${ym}-01`;
 
       document.getElementById('recordModal').classList.remove('hidden');
       setTimeout(() => document.getElementById('carNumber').focus(), 100);
@@ -439,6 +388,10 @@
       document.getElementById('recordModal').classList.add('hidden');
     }
 
+    // 초기 실행: 빈 서식 테이블 먼저 즉시 표시 후 실시간 리스너 연결
+    const [initY, initM] = currYM.split('-');
+    document.getElementById('printPeriodText').textContent = `${initY}년 ${parseInt(initM, 10)}월`;
+    renderTable();
     setupRealtimeListener();
   </script>
 </body>
