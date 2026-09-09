@@ -21,7 +21,6 @@
     }
     .custom-table th, .custom-table td { border: 1px solid #333; }
     .table-row-hover:hover { background-color: #f1f5f9; cursor: pointer; }
-    /* 모바일 테이블 터치 최적화 */
     .table-scroll-container {
       -webkit-overflow-scrolling: touch;
     }
@@ -31,15 +30,27 @@
 
   <!-- 컨트롤 바 (인쇄 시 자동 숨김) -->
   <div class="no-print max-w-5xl mx-auto mb-3 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-    <div class="flex items-center justify-between sm:justify-start gap-2">
-      <div class="flex items-center gap-2">
-        <label class="font-bold text-xs sm:text-sm shrink-0">작업 년월:</label>
-        <input type="month" id="selectedMonth" class="border rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="setupRealtimeListener()" />
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- 작업 년월 -->
+      <div class="flex items-center gap-1.5">
+        <label class="font-bold text-xs sm:text-sm shrink-0">년월:</label>
+        <input type="month" id="selectedMonth" class="border rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500" onchange="onMonthChanged()" />
       </div>
+
+      <!-- 일자 선택 드롭다운 -->
+      <div class="flex items-center gap-1.5">
+        <label class="font-bold text-xs sm:text-sm shrink-0">일자:</label>
+        <select id="selectedDay" class="border rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500 bg-white" onchange="renderTable()">
+          <option value="">전체 일자</option>
+          <!-- 1일부터 31일까지 JS로 자동 생성 -->
+        </select>
+      </div>
+
       <span id="liveStatus" class="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 실시간
       </span>
     </div>
+
     <div class="flex items-center gap-2">
       <button onclick="openAddModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition">
         + 새 작업 등록
@@ -107,7 +118,7 @@
     </p>
   </div>
 
-  <!-- 작업 등록/수정 팝업 모달 (모바일 반응형 적용) -->
+  <!-- 작업 등록/수정 팝업 모달 -->
   <div id="recordModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
     <div class="bg-white rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl my-auto max-h-[92vh] flex flex-col">
       <div class="flex justify-between items-center pb-3 border-b border-gray-100 shrink-0">
@@ -192,7 +203,16 @@
     const currYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     document.getElementById('selectedMonth').value = currYM;
 
-    // 타임스탬프 파싱 헬퍼 (ISO 문자열 및 Firestore Timestamp 호환)
+    // 일자 드롭다운 옵션 채우기 (1일 ~ 31일)
+    const daySelect = document.getElementById('selectedDay');
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement('option');
+      opt.value = String(d).padStart(2, '0');
+      opt.textContent = `${d}일`;
+      daySelect.appendChild(opt);
+    }
+
+    // 타임스탬프 파싱 (문자열 및 Timestamp 호환)
     function parseTimestamp(val) {
       if (!val) return 0;
       if (typeof val.toMillis === 'function') return val.toMillis();
@@ -204,10 +224,14 @@
       return 0;
     }
 
+    function onMonthChanged() {
+      // 년월 변경 시 일자 선택을 '전체 일자'로 초기화 후 재조회
+      document.getElementById('selectedDay').value = '';
+      setupRealtimeListener();
+    }
+
     function setupRealtimeListener() {
       const ym = document.getElementById('selectedMonth').value;
-      const [year, month] = ym.split('-');
-      document.getElementById('printPeriodText').textContent = `${year}년 ${parseInt(month, 10)}월`;
 
       if (unsubscribe) unsubscribe();
 
@@ -219,8 +243,8 @@
             currentRecords.push({ id: doc.id, ...doc.data() });
           });
 
-          // 1순위: 작업 일자(date) 내림차순
-          // 2순위: 동일 날짜 내 등록 시각(createdAt) 내림차순
+          // 1순위: 작업 일자(date) 내림차순 (최신 날짜 우선)
+          // 2순위: 동일 날짜 내 최근 등록순(createdAt 내림차순)
           currentRecords.sort((a, b) => {
             const dateA = a.date || '';
             const dateB = b.date || '';
@@ -246,13 +270,32 @@
     }
 
     function renderTable() {
+      const ym = document.getElementById('selectedMonth').value;
+      const [year, month] = ym.split('-');
+      const selDay = document.getElementById('selectedDay').value;
+
+      // 제목 및 인쇄 헤더 업데이트 (일자 선택 시 일자까지 표시)
+      let periodText = `${year}년 ${parseInt(month, 10)}월`;
+      if (selDay) {
+        periodText += ` ${parseInt(selDay, 10)}일`;
+      }
+      document.getElementById('printPeriodText').textContent = periodText;
+
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
       let sum = 0;
 
       const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
 
+      // 일자 + 검색어 필터링
       const filteredRecords = currentRecords.filter(item => {
+        // 일자 필터링
+        if (selDay) {
+          const targetDate = `${ym}-${selDay}`;
+          if (item.date !== targetDate) return false;
+        }
+
+        // 검색어 필터링
         if (!keyword) return true;
         const carNum = (item.carNumber || '').toLowerCase();
         const carMdl = (item.carModel || '').toLowerCase();
@@ -281,6 +324,7 @@
         `;
       });
 
+      // A4 용지 규격을 위한 빈 행 채우기 (24줄 유지)
       const emptyCount = Math.max(0, TOTAL_ROWS - filteredRecords.length);
       for (let i = 0; i < emptyCount; i++) {
         tbody.innerHTML += `
@@ -334,6 +378,7 @@
 
         if (document.getElementById('selectedMonth').value !== ym) {
           document.getElementById('selectedMonth').value = ym;
+          document.getElementById('selectedDay').value = '';
           setupRealtimeListener();
         }
 
@@ -367,8 +412,15 @@
       document.getElementById('recordForm').reset();
 
       const ym = document.getElementById('selectedMonth').value;
+      const selDay = document.getElementById('selectedDay').value;
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      document.getElementById('workDate').value = todayStr.startsWith(ym) ? todayStr : `${ym}-01`;
+      
+      // 일자 드롭다운이 선택되어 있으면 해당 일자로 기본 설정
+      if (selDay) {
+        document.getElementById('workDate').value = `${ym}-${selDay}`;
+      } else {
+        document.getElementById('workDate').value = todayStr.startsWith(ym) ? todayStr : `${ym}-01`;
+      }
 
       document.getElementById('recordModal').classList.remove('hidden');
       setTimeout(() => document.getElementById('carNumber').focus(), 150);
@@ -398,8 +450,6 @@
     }
 
     // 초기 실행
-    const [initY, initM] = currYM.split('-');
-    document.getElementById('printPeriodText').textContent = `${initY}년 ${parseInt(initM, 10)}월`;
     renderTable();
     setupRealtimeListener();
   </script>
